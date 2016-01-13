@@ -9,6 +9,8 @@ from knoweagebleClassifyFlattened import CorpusReader
 import cPickle
 import os
 
+from sklearn.metrics import roc_curve, auc
+
 def work(argv):
 	print "Started!"
 	rng = numpy.random.RandomState(23455)
@@ -38,11 +40,14 @@ def work(argv):
 	params = layer2.params + layer1.params + layer0.params
 	
 	# Load the parameters last time, optionally.
-	para_path = "data/web/model/scnn.model"
-	traintext = "data/web/train/text"
-	trainlabel = "data/web/train/label"
-	testtext = "data/web/test/text"
-	testlabel = "data/web/test/label"
+	
+	data_name = "car"
+	
+	para_path = "data/" + data_name + "/model/scnn.model"
+	traintext = "data/" + data_name + "/train/text"
+	trainlabel = "data/" + data_name + "/train/label"
+	testtext = "data/" + data_name + "/test/text"
+	testlabel = "data/" + data_name + "/test/label"
 	
 	
 	loadParamsVal(para_path, params)
@@ -61,6 +66,7 @@ def work(argv):
 		labels = transToTensor(labels, numpy.int32)
 		
 	# 	valid_cr = CorpusReader(minDocSentenceNum=5, minSentenceWordNum=5, dataset="data/valid/split", labelset="data/valid/label.txt")
+		print
 		print "Loading test data."
 		cr_test = CorpusReader(minDocSentenceNum=5, minSentenceWordNum=5, dataset=testtext, labelset=testlabel)
 		validDocMatrixes, validDocSentenceNums, validSentenceWordNums, validIds, validLabels = cr_test.getCorpus([0, 1000])
@@ -79,7 +85,7 @@ def work(argv):
 		index = T.lscalar("index")
 		batchSize = 10
 		n_batches = (len(docSentenceNums.get_value()) - 1) / batchSize + 1
-		print "\n"
+		print
 		print "Train set size is ", len(docMatrixes.get_value())
 		print "Validating set size is ", len(validDocMatrixes.get_value())
 		print "Batch size is ", batchSize
@@ -99,7 +105,7 @@ def work(argv):
 		
 		valid_model = theano.function(
 	 		[],
-	 		[cost, error, layer2.y_pred],
+	 		[cost, error, layer2.y_pred, docLabel],
 	 		givens={
 							corpus: validDocMatrixes,
 							docSentenceCount: validDocSentenceNums,
@@ -110,7 +116,7 @@ def work(argv):
 		# for list-type data
 		train_model = theano.function(
 	 		[index],
-	 		[cost, error],
+	 		[cost, error, layer2.y_pred, docLabel],
 	 		updates=updates,
 	 		givens={
 							corpus: docMatrixes,
@@ -127,17 +133,22 @@ def work(argv):
 		ite = 0
 		
 		# ####Validate the model####
-		costNum, errorNum, y_pred = valid_model()
+		costNum, errorNum, pred_label, real_label = valid_model()
 		print "Valid current model:"
 		print "Cost: ", costNum
 		print "Error: ", errorNum
-		print "Valid Pred: ", y_pred
+		print "Valid Pred: ", pred_label
+		
+		fpr, tpr, _ = roc_curve(pred_label, real_label)
+		roc_auc = auc(fpr, tpr)
+		print "ROC: ", roc_auc
+			
 		while (epoch < n_epochs):
 			epoch = epoch + 1
 			#######################
 			for i in range(n_batches):
 				# for list-type data
-				costNum, errorNum = train_model(i)
+				costNum, errorNum, pred_label, real_label = train_model(i)
 				ite = ite + 1
 				# for padding data
 	# 			costNum, errorNum = train_model(docMatrixes, labels)
@@ -150,11 +161,15 @@ def work(argv):
 					print "Error: ", errorNum
 					
 			# Validate the model
-			costNum, errorNum, y_pred = valid_model()
+			costNum, errorNum, pred_label, real_label = valid_model()
 			print "Valid current model:"
 			print "Cost: ", costNum
 			print "Error: ", errorNum
-			print "Valid Pred: ", y_pred
+# 			print "Valid Pred: ", pred_label
+			
+			fpr, tpr, _ = roc_curve(pred_label, real_label)
+			roc_auc = auc(fpr, tpr)
+			print "ROC: ", roc_auc
 			
 			# Save model
 			print "Saving parameters."
