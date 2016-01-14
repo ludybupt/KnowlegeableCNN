@@ -9,9 +9,13 @@ from knoweagebleClassifyFlattened import CorpusReader
 import cPickle
 import os
 
+import sys
+
 from sklearn.metrics import roc_curve, auc
 
-def work(argv):
+def work(mode, data_name):
+	print "mode: ", mode
+	print "data_name: ", data_name
 	print "Started!"
 	rng = numpy.random.RandomState(23455)
 	docSentenceCount = T.ivector("docSentenceCount")
@@ -41,7 +45,7 @@ def work(argv):
 	
 	# Load the parameters last time, optionally.
 	
-	data_name = "car"
+# 	data_name = "car"
 	
 	para_path = "data/" + data_name + "/model/scnn.model"
 	traintext = "data/" + data_name + "/train/text"
@@ -52,7 +56,7 @@ def work(argv):
 	
 	loadParamsVal(para_path, params)
 
-	if(argv == "train"):
+	if(mode == "train"):
 		print "Loading train data."
 		cr_train = CorpusReader(minDocSentenceNum=5, minSentenceWordNum=5, dataset=traintext, labelset=trainlabel)
 		docMatrixes, docSentenceNums, sentenceWordNums, ids, labels = cr_train.getCorpus([0, 100000])
@@ -129,7 +133,7 @@ def work(argv):
 		print "Compiled."
 		print "Start to train."
 		epoch = 0
-		n_epochs = 200
+		n_epochs = 2000
 		ite = 0
 		
 		# ####Validate the model####
@@ -175,7 +179,7 @@ def work(argv):
 			print "Saving parameters."
 			saveParamsVal(para_path, params)
 			print "Saved."
-	elif(argv == "deploy"):
+	elif(mode == "deploy"):
 		print "Compiling computing graph."
 		output_model = theano.function(
 	 		[corpus, docSentenceCount, sentenceWordCount],
@@ -236,4 +240,4 @@ def transToTensor(data, t):
         borrow=True
     )
 if __name__ == '__main__':
-	work("train")
+	work(mode=sys.argv[1], data_name=sys.argv[2])
