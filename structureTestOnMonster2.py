@@ -109,7 +109,7 @@ def work(mode, data_name):
 		
 		valid_model = theano.function(
 	 		[],
-	 		[cost, error, layer2.y_pred, docLabel],
+	 		[cost, error, layer2.y_pred, docLabel, T.transpose(layer2.p_y_given_x)[1]],
 	 		givens={
 							corpus: validDocMatrixes,
 							docSentenceCount: validDocSentenceNums,
@@ -137,13 +137,14 @@ def work(mode, data_name):
 		ite = 0
 		
 		# ####Validate the model####
-		costNum, errorNum, pred_label, real_label = valid_model()
+		costNum, errorNum, pred_label, real_label, pred_prob = valid_model()
 		print "Valid current model:"
 		print "Cost: ", costNum
 		print "Error: ", errorNum
 		print "Valid Pred: ", pred_label
+		print "pred_prob: ", pred_prob
 		
-		fpr, tpr, _ = roc_curve(pred_label, real_label)
+		fpr, tpr, _ = roc_curve(real_label, pred_prob)
 		roc_auc = auc(fpr, tpr)
 		print "ROC: ", roc_auc
 			
@@ -165,13 +166,14 @@ def work(mode, data_name):
 					print "Error: ", errorNum
 					
 			# Validate the model
-			costNum, errorNum, pred_label, real_label = valid_model()
+			costNum, errorNum, pred_label, real_label, pred_prob = valid_model()
 			print "Valid current model:"
 			print "Cost: ", costNum
 			print "Error: ", errorNum
+			print "pred_prob: ", pred_prob
 # 			print "Valid Pred: ", pred_label
 			
-			fpr, tpr, _ = roc_curve(pred_label, real_label)
+			fpr, tpr, _ = roc_curve(real_label, pred_prob)
 			roc_auc = auc(fpr, tpr)
 			print "ROC: ", roc_auc
 			
