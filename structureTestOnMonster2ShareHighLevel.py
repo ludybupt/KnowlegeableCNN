@@ -21,9 +21,18 @@ def work(mode, data_name, test_dataname):
 	
 	data_names = data_name.split(":")
 	data_count = len(data_names)
+	print "Train dataset:"
 	for i in xrange(data_count):
 		print "%d: %s" % (i, data_names[i])
+		
+	print "Test dataset:"
+	test_data_names = test_dataname.split(":")
+	test_data_count = len(test_data_names)
+	for i in xrange(test_data_count):
+		print "%d: %s" % (i, test_data_names[i])
 	
+	if test_data_count != data_count:
+		raise Exception("The amount of test and train dataset must be the same.")
 	
 	rng = numpy.random.RandomState(23455)
 	docSentenceCount = T.ivector("docSentenceCount")
@@ -79,17 +88,21 @@ def work(mode, data_name, test_dataname):
 	para_path = "data/" + data_name + "/model/scnn.model"
 	traintext = ["data/" + data_names[i] + "/train/text"  for i in xrange(data_count)]
 	trainlabel = ["data/" + data_names[i] + "/train/label"  for i in xrange(data_count)]
-	testtext = "data/" + test_dataname + "/test/text"
-	testlabel = "data/" + test_dataname + "/test/label"
+	testtext = ["data/" + data_names[i] + "/test/text"  for i in xrange(data_count)]
+	testlabel =  ["data/" + data_names[i] + "/test/label"  for i in xrange(data_count)]
 	
 	loadParamsVal(para_path, params)
 
 	if(mode == "train"):
 		train_model = list()
+		valid_model = list()
 		print "Loading train data."
 		batchSize = 10
 		learning_rate = 0.1
 		n_batches = list()
+		
+		print "Loading test data."
+ 		
 		for i in xrange(data_count):
 			cr_train = CorpusReader(minDocSentenceNum=5, minSentenceWordNum=5, dataset=traintext[i], labelset=trainlabel[i])
 			docMatrixes, docSentenceNums, sentenceWordNums, ids, labels = cr_train.getCorpus([0, 100000])
@@ -115,7 +128,7 @@ def work(mode, data_name, test_dataname):
 				(param_i, param_i - learning_rate * grad_i)
 				for param_i, grad_i in zip(local_params[i], grads)
 			]
-			print "Compiling computing graph."
+			print "Compiling train computing graph."
 			
 			train_model.append(theano.function(
 		 		[index],
@@ -130,31 +143,28 @@ def work(mode, data_name, test_dataname):
 	 		))
 			print "Compiled."
 			
-		
-		print
-		print "Loading test data."
-# 		
-# 		cr_test = CorpusReader(minDocSentenceNum=5, minSentenceWordNum=5, dataset=testtext, labelset=testlabel)
-# 		validDocMatrixes, validDocSentenceNums, validSentenceWordNums, validIds, validLabels = cr_test.getCorpus([0, 1000])
-# 		print "Validating set size is ", len(validDocMatrixes.get_value())
-# 		validDocMatrixes = transToTensor(validDocMatrixes, theano.config.floatX)
-# 		validDocSentenceNums = transToTensor(validDocSentenceNums, numpy.int32)
-# 		validSentenceWordNums = transToTensor(validSentenceWordNums, numpy.int32)
-# 		validLabels = transToTensor(validLabels, numpy.int32)
-# 		print "Data loaded."
-# 		
-# 		print "Compiling computing graph."
-# 		valid_model = theano.function(
-# 	 		[],
-# 	 		[cost, error, layer2.y_pred, docLabel, T.transpose(layer2.p_y_given_x)[1]],
-# 	 		givens={
-# 							corpus: validDocMatrixes,
-# 							docSentenceCount: validDocSentenceNums,
-# 							sentenceWordCount: validSentenceWordNums,
-# 							docLabel: validLabels
-# 					}
-# 	 	)
-# 		print "Compiled."
+			print "Load test dataname: %s" % test_data_names[i]
+			cr_test = CorpusReader(minDocSentenceNum=5, minSentenceWordNum=5, dataset=testtext[i], labelset=testlabel[i])
+			validDocMatrixes, validDocSentenceNums, validSentenceWordNums, validIds, validLabels = cr_test.getCorpus([0, 1000])
+			validDocMatrixes = transToTensor(validDocMatrixes, theano.config.floatX)
+			validDocSentenceNums = transToTensor(validDocSentenceNums, numpy.int32)
+			validSentenceWordNums = transToTensor(validSentenceWordNums, numpy.int32)
+			validLabels = transToTensor(validLabels, numpy.int32)
+			print "Validating set size is ", len(validDocMatrixes.get_value())
+			print "Data loaded."
+			
+			print "Compiling test computing graph."
+			valid_model.append(theano.function(
+		 		[],
+		 		[cost, error, layer2[i].y_pred, docLabel, T.transpose(layer2[i].p_y_given_x)[1]],
+		 		givens={
+								corpus: validDocMatrixes,
+								docSentenceCount: validDocSentenceNums,
+								sentenceWordCount: validSentenceWordNums,
+								docLabel: validLabels
+						}
+		 	))
+			print "Compiled."
 		# for list-type data
 
 		print "Start to train."
@@ -163,18 +173,19 @@ def work(mode, data_name, test_dataname):
 		ite = 0
 		
 		# ####Validate the model####
-# 		costNum, errorNum, pred_label, real_label, pred_prob = valid_model()
-# 		print "Valid current model:"
-# 		print "Cost: ", costNum
-# 		print "Error: ", errorNum
-# 		print "Valid Pred: ", pred_label
-# 		print "pred_prob: ", pred_prob
-# 		
-# 		fpr, tpr, _ = roc_curve(real_label, pred_prob)
-# 		roc_auc = auc(fpr, tpr)
-# 		print "data_name: ", data_name
-# 		print "test_dataname: ", test_dataname
-# 		print "ROC: ", roc_auc
+		for dataset_index in xrange(data_count):
+			costNum, errorNum, pred_label, real_label, pred_prob = valid_model[i]()
+			print "Valid current model :", data_names[dataset_index]
+			print "Cost: ", costNum
+			print "Error: ", errorNum
+# 			print "Valid Pred: ", pred_label
+# 			print "pred_prob: ", pred_prob
+	 		
+			fpr, tpr, _ = roc_curve(real_label, pred_prob)
+			roc_auc = auc(fpr, tpr)
+			print "data_name: ", data_name
+			print "test_dataname: ", test_dataname
+			print "ROC: ", roc_auc
 			
 		while (epoch < n_epochs):
 			epoch = epoch + 1
@@ -197,20 +208,21 @@ def work(mode, data_name, test_dataname):
 						print "Cost: ", costNum
 						print "Error: ", errorNum
 						
-				# Validate the model
-	# 			costNum, errorNum, pred_label, real_label, pred_prob = valid_model()
-	# 			print "Valid current model:"
-	# 			print "Cost: ", costNum
-	# 			print "Error: ", errorNum
+			# Validate the model
+			for dataset_index in xrange(data_count):
+				costNum, errorNum, pred_label, real_label, pred_prob = valid_model[i]()
+				print "Valid current model :", data_names[dataset_index]
+				print "Cost: ", costNum
+				print "Error: ", errorNum
+	# 			print "Valid Pred: ", pred_label
 	# 			print "pred_prob: ", pred_prob
-	# # 			print "Valid Pred: ", pred_label
-	# 			
-	# 			fpr, tpr, _ = roc_curve(real_label, pred_prob)
-	# 			roc_auc = auc(fpr, tpr)
-	# 			print "data_name: ", data_name
-	# 			print "test_dataname: ", test_dataname
-	# 			print "ROC: ", roc_auc
-				
+		 		
+				fpr, tpr, _ = roc_curve(real_label, pred_prob)
+				roc_auc = auc(fpr, tpr)
+				print "data_name: ", data_name
+				print "test_dataname: ", test_dataname
+				print "ROC: ", roc_auc
+		
 				# Save model
 				print "Saving parameters."
 				saveParamsVal(para_path, params)
