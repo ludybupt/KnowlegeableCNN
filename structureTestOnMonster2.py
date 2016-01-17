@@ -13,7 +13,7 @@ import sys
 
 from sklearn.metrics import roc_curve, auc
 
-def work(mode, data_name):
+def work(mode, data_name, test_dataname):
 	print "mode: ", mode
 	print "data_name: ", data_name
 	print "Started!"
@@ -50,8 +50,8 @@ def work(mode, data_name):
 	para_path = "data/" + data_name + "/model/scnn.model"
 	traintext = "data/" + data_name + "/train/text"
 	trainlabel = "data/" + data_name + "/train/label"
-	testtext = "data/" + data_name + "/test/text"
-	testlabel = "data/" + data_name + "/test/label"
+	testtext = "data/" + test_dataname + "/test/text"
+	testlabel = "data/" + test_dataname + "/test/label"
 	
 	
 	loadParamsVal(para_path, params)
@@ -146,6 +146,7 @@ def work(mode, data_name):
 		
 		fpr, tpr, _ = roc_curve(real_label, pred_prob)
 		roc_auc = auc(fpr, tpr)
+		print "data_name: ", data_name
 		print "ROC: ", roc_auc
 			
 		while (epoch < n_epochs):
@@ -175,6 +176,7 @@ def work(mode, data_name):
 			
 			fpr, tpr, _ = roc_curve(real_label, pred_prob)
 			roc_auc = auc(fpr, tpr)
+			print "data_name: ", data_name
 			print "ROC: ", roc_auc
 			
 			# Save model
@@ -242,4 +244,4 @@ def transToTensor(data, t):
         borrow=True
     )
 if __name__ == '__main__':
-	work(mode=sys.argv[1], data_name=sys.argv[2])
+	work(mode=sys.argv[1], data_name=sys.argv[2], test_dataname=sys.argv[3])
