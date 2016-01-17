@@ -23,13 +23,15 @@ class CorpusReader:
             self.docs = None
         
         # Load stop words
-        self.stopwords = loadStopwords("data/stopwords", "GBK")
-        print "stop words: ", len(self.stopwords)
+        if CorpusReader.stopwords is None:
+            CorpusReader.stopwords = loadStopwords("data/stopwords", "GBK")
+            print "stop words: ", len(self.stopwords)
         
         # Load w2v model data from file
-        self.w2vDict = loadW2vModel("data/w2vFlat")
-#         self.w2vDict = loadW2vModel("data/word2vec_flat_big")
-        print "w2v model contains: ", len(self.w2vDict)
+        if CorpusReader.w2vDict is None:
+            CorpusReader.w2vDict = loadW2vModel("data/w2vFlat")
+    #         self.w2vDict = loadW2vModel("data/word2vec_flat_big")
+            print "w2v model contains: ", len(self.w2vDict)
         
     labels = None
     docs = None
