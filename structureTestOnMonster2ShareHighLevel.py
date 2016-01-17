@@ -88,8 +88,8 @@ def work(mode, data_name, test_dataname):
 	para_path = "data/" + data_name + "/model/scnn.model"
 	traintext = ["data/" + data_names[i] + "/train/text"  for i in xrange(data_count)]
 	trainlabel = ["data/" + data_names[i] + "/train/label"  for i in xrange(data_count)]
-	testtext = ["data/" + data_names[i] + "/test/text"  for i in xrange(data_count)]
-	testlabel =  ["data/" + data_names[i] + "/test/label"  for i in xrange(data_count)]
+	testtext = ["data/" + test_data_names[i] + "/test/text"  for i in xrange(data_count)]
+	testlabel =  ["data/" + test_data_names[i] + "/test/label"  for i in xrange(data_count)]
 	
 	loadParamsVal(para_path, params)
 
